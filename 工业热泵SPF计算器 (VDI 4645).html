@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工业热泵SPF计算器 (VDI 4645)</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 使用 Inter 字体 -->
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* 自定义工具提示样式 */
+        [data-tooltip] {
+            position: relative;
+            cursor: pointer;
+        }
+        [data-tooltip]:before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%; /* 位于元素上方 */
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background-color: #333;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+            visibility: hidden; /* 默认隐藏 */
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+            z-index: 10;
+            width: max-content; /* 宽度自适应内容 */
+            max-width: 300px; /* 最大宽度 */
+            text-align: left;
+            line-height: 1.5;
+        }
+        [data-tooltip]:hover:before {
+            visibility: visible; /* 悬停时显示 */
+            opacity: 1;
+        }
+        /* 表格输入框 */
+        .input-cell {
+            padding: 8px;
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px 8px;
+            border: 1px solid #D1D5DB; /* gray-300 */
+            border-radius: 8px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #2563EB; /* blue-600 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); /* blue-400 with opacity */
+        }
+        /* 结果卡片 */
+        .result-card {
+            background-color: #F9FAFB; /* gray-50 */
+            border: 1px solid #E5E7EB; /* gray-200 */
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #E5E7EB; /* gray-200 */
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            font-size: 1rem; /* 16px */
+            color: #374151; /* gray-700 */
+        }
+        .result-value {
+            font-size: 1.125rem; /* 18px */
+            font-weight: 600;
+            color: #111827; /* gray-900 */
+        }
+        .result-spf {
+            font-size: 2.25rem; /* 36px */
+            font-weight: 800;
+            color: #1D4ED8; /* blue-700 */
+        }
+        /* 折叠面板 (Accordion) 样式 */
+        details {
+            border: 1px solid #E5E7EB; /* gray-200 */
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #FFFFFF;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        }
+        summary {
+            padding: 1rem 1.5rem;
+            font-size: 1.125rem; /* 18px */
+            font-weight: 600;
+            color: #111827; /* gray-900 */
+            background-color: #F9FAFB; /* gray-50 */
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        summary:hover {
+            background-color: #F3F4F6; /* gray-100 */
+        }
+        summary::-webkit-details-marker {
+            display: none; /* 隐藏默认箭头 (Chrome) */
+        }
+        summary:after {
+            content: '+';
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: #6B7280; /* gray-500 */
+            transition: transform 0.2s;
+        }
+        details[open] summary:after {
+            transform: rotate(45deg);
+        }
+        .details-content {
+            padding: 1.5rem;
+            border-top: 1px solid #E5E7EB; /* gray-200 */
+            line-height: 1.75;
+            color: #374151; /* gray-700 */
+        }
+        .details-content h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827; /* gray-900 */
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .details-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        .details-content li {
+            margin-bottom: 0.5rem;
+        }
+        .details-content p {
+            margin-bottom: 1rem;
+        }
+        /* 示例案例表格 */
+        .example-table {
+            width: 100%;
+            margin-top: 1.5rem;
+            border-collapse: collapse;
+            font-size: 0.875rem; /* 14px */
+        }
+        .example-table th, .example-table td {
+            border: 1px solid #E5E7EB; /* gray-200 */
+            padding: 10px 12px;
+            text-align: left;
+        }
+        .example-table th {
+            background-color: #F9FAFB; /* gray-50 */
+            font-weight: 600;
+            color: #4B5563; /* gray-600 */
+        }
+        .example-table td {
+            background-color: #FFFFFF;
+            color: #111827; /* gray-900 */
+        }
+        .example-table .highlight-col {
+            background-color: #FDFDEA; /* yellow-50 */
+        }
+        .example-table .result-col {
+            background-color: #F0F9FF; /* blue-50 */
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 sm:p-8 lg:p-10 rounded-2xl shadow-xl">
+
+        <!-- 头部 -->
+        <header class="border-b border-gray-200 pb-6 mb-8">
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                工业热泵全年综合性能系数 (SPF) 策划与计算
+            </h1>
+            <p class="mt-3 text-lg text-gray-600">
+                基于 VDI 4645 标准，结合策划步骤与月度分箱法 (Bin Method) 估算 SPF (JAZ)。
+            </p>
+        </header>
+
+        <main>
+            <!-- 第一部分: 策划指南 -->
+            <section id="planning-guide">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+                    第一部分：SPF 策划与数据准备 (VDI 4645 步骤一至四)
+                </h2>
+                <p class="text-gray-600 mb-6">
+                    在进行计算之前，请参照以下 VDI 4645 的核心步骤进行数据准备。这能确保您输入计算器的数据真实反映全年运行情况。
+                </p>
+
+                <div class="space-y-4">
+                    <details>
+                        <summary>步骤一：明确系统边界 (System Boundaries)</summary>
+                        <div class="details-content">
+                            <p>首先要定义“热泵系统”包括什么。VDI 4645 建议的评估边界 (Bilanzgrenze) 通常包括：</p>
+                            <ul>
+                                <li>热泵主机（压缩机、控制器）</li>
+                                <li>热源侧循环泵</li>
+                                <li>热汇侧循环泵</li>
+                                <li>（如果适用）除霜能耗</li>
+                            </ul>
+                            <p><strong>不包括：</strong> 备用热源（例如电锅炉或天然气锅炉）的能耗。</p>
+                            <p class="font-medium text-gray-800">您计算的 SPF 必须是针对这个边界内的所有耗电量。这对应计算器中的 "月辅助设备耗电 (E_aux)"。</p>
+                        </div>
+                    </details>
+
+                    <details>
+                        <summary>步骤二：分析热源 (Heat Source Characterization)</summary>
+                        <div class="details-content">
+                            <p>这是工业热泵的核心。</p>
+                            <ul>
+                                <li><strong>来源：</strong> 明确热源是什么？是工艺冷却水、空压机余热、废气余热、还是环境空气/水源？</li>
+                                <li><strong>温度曲线：</strong> 绘制热源在一年中每个月或每个典型工况下的平均温度曲线。
+                                    <ul>
+                                        <li>例如：工艺余热可能是全年恒定的 35°C。</li>
+                                        <li>例如：室外空气则是在 -5°C 到 25°C 之间波动。</li>
+                                    </ul>
+                                </li>
+                                <li><strong>可用热量：</strong> 热源在不同时间点能提供多少热量 (kW)？</li>
+                            </ul>
+                        </div>
+                    </details>
+
+                    <details>
+                        <summary>步骤三：分析热汇 (Heat Sink Characterization)</summary>
+                        <div class="details-content">
+                            <p>即您的用热需求。</p>
+                            <ul>
+                                <li><strong>用途：</strong> 明确热量用于什么？是工艺加热、恒温、还是建筑供暖？</li>
+                                <li><strong>温度曲线：</strong> 明确供水和回水的温度需求。
+                                    <ul>
+                                        <li>例如：工艺加热需要恒定的 80°C 供水。</li>
+                                        <li>例如：建筑供暖可能是随室外温度变化的变水温（例如 45°C ~ 65°C）。</li>
+                                    </ul>
+                                </li>
+                                <li><strong>负荷曲线：</strong> 绘制全年 8760 小时或每月的供热负荷需求 (kWh)。这必须与您在计算器中输入的“月供热需求 (Q_demand)”相匹配。</li>
+                            </ul>
+                        </div>
+                    </details>
+
+                    <details>
+                        <summary>步骤四：获取热泵性能图谱 (Performance Map)</summary>
+                        <div class="details-content">
+                            <p>这是来自热泵制造商的核心数据。您需要向制造商索取热泵在不同工况下的性能数据（Leistungskennfeld）。</p>
+                            <p>这份数据会显示：在不同的热源温度 (T-Source) 和 不同的热汇温度 (T-Sink) 组合下，热泵的制热量 (Capacity) 和 性能系数 (COP) 是多少。</p>
+                            <p><strong>关键：</strong> 还需要部分负荷 (Part-Load) 数据，即热泵在 75%, 50%, 25% 负荷下运行时，其 COP 如何变化。</p>
+                            <p class="font-medium text-gray-800">您需要基于步骤二、三的数据，在步骤四的图谱中查到每个月的“平均运行COP”，并填入计算器中的 "月平均运行 COP (COP_op)"。</p>
+                            <hr class="my-4">
+                            <h3>策划总结与建议</h3>
+                            <ul>
+                                <li><strong>首选：使用制造商软件。</strong>
+                                    <br>最快、最专业的方法是：将您的热源/热汇/负荷曲线（步骤二和三）提供给一个或多个可靠的工业热泵制造商。他们会使用自己的专业选型软件（已经内置了步骤四和五）为您运行模拟，并提供一个准确的 SPF 报告。
+                                </li>
+                                <li><strong>次选：使用数据库参考值。</strong>
+                                    <br>如果只是初步估算，您可以查找 VDI 4645 或相关文献中，与您工况（例如 "30°C 水 -> 80°C 水"）相近的应用案例，它们会提供一个典型 SPF 范围。
+                                </li>
+                                <li><strong>避免：</strong>
+                                    <br>绝对不要直接使用热泵的额定 COP (例如在 7°C 空气 / 35°C 水 下的 COP=4.0) 作为 SPF。这在工业高温应用中是完全错误的。
+                                </li>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+            </section>
+
+            <!-- 分隔符 -->
+            <div class="mt-12 pt-10 border-t border-gray-300"></div>
+
+            <!-- 第二部分: 计算器 -->
+            <section id="spf-calculator">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+                    第二部分：月度分箱法模拟计算 (VDI 4645 步骤五 & 六)
+                </h2>
+                <p class="text-gray-600 mb-6">
+                    请在完成第一部分的数据准备后，将每月的数据填入下表。
+                </p>
+
+                <!-- 输入表格 -->
+                <div class="overflow-x-auto shadow-md rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    月份 (步骤五：工况箱)
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" 
+                                    data-tooltip="该月所需的总供热量 (kWh) (来自步骤三)">
+                                    月供热需求 (Q_demand) [kWh]
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    data-tooltip="输入该月典型工况下（包括部分负荷）的平均运行COP (来自步骤四性能图谱)">
+                                    月平均运行 COP (COP_op)
+                                </th>
+                                <th scope="col" class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    data-tooltip="包括热源泵、热汇泵、除霜等辅助设备在该月的总耗电量 (来自步骤一系统边界)">
+                                    月辅助设备耗电 (E_aux) [kWh]
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="input-table" class="bg-white divide-y divide-gray-200">
+                            <!-- JS 动态生成行 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 操作和消息 -->
+                <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <button id="calculate-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+                        计算 SPF (步骤六：汇总)
+                    </button>
+                    <button id="demo-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition duration-300">
+                        加载第三部分案例数据
+                    </button>
+                    <div id="error-message" class="text-red-600 font-medium hidden"></div>
+                </div>
+
+                <!-- 结果显示 -->
+                <div id="results-container" class="result-card hidden">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-6">计算结果 (步骤六：汇总)</h2>
+                    
+                    <div class="result-item">
+                        <span class="result-label">全年总供热 (Q_total)</span>
+                        <span class="result-value"><span id="result_q_total">0.00</span> kWh</span>
+                    </div>
+                    
+                    <div class="result-item">
+                        <span class="result-label">压缩机总耗电 (E_compressor)</span>
+                        <span class="result-value"><span id="result_e_compressor">0.00</span> kWh</span>
+                    </div>
+
+                    <div class="result-item">
+                        <span class="result-label">辅助设备总耗电 (E_aux)</span>
+                        <span class="result-value"><span id="result_e_aux">0.00</span> kWh</span>
+                    </div>
+
+                    <div class="result-item border-t-2 border-gray-300 pt-4 mt-4">
+                        <span class="result-label font-bold text-gray-800">全年总耗电 (E_total)</span>
+                        <span class="result-value font-bold text-lg"><span id="result_e_total">0.00</span> kWh</span>
+                    </div>
+
+                    <div class="mt-8 text-center">
+                        <span class="text-lg font-medium text-gray-600 block">全年综合性能系数 (SPF)</span>
+                        <span id="result_spf" class="result-spf block mt-2">0.000</span>
+                </div>
+            </section>
+
+            <!-- 分隔符 -->
+            <div class="mt-12 pt-10 border-t border-gray-300"></div>
+
+            <!-- 第三部分: VDI 4645 典型案例分析 -->
+            <section id="example-case">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">
+                    第三部分：VDI 4645 典型案例分析 (标准模板)
+                </h2>
+                <p class="text-gray-600 mb-6">
+                    这是一个基于典型工业场景（工艺余热回收）的SPF计算过程示例，展示了如何从原始数据推导出SPF。
+                </p>
+
+                <div class="space-y-4">
+                    <!-- 案例定义 -->
+                    <details class="border-blue-300" open>
+                        <summary class="bg-blue-50 text-blue-900 hover:bg-blue-100">
+                            案例定义：工艺冷却水余热回收 (30°C -> 80°C)
+                        </summary>
+                        <div class="details-content">
+                            <h3>场景描述</h3>
+                            <p>某工厂全年运行，产生 <strong>35°C</strong> 的工艺冷却水（热源）。现在希望使用热泵回收这部分余热，用于加热另一条需要 <strong>80°C</strong> 热水的生产线（热汇）。</p>
+
+                            <h3>步骤一：系统边界</h3>
+                            <ul>
+                                <li><strong>热泵主机：</strong> 螺杆式压缩机，制热量 500 kW (@ T_source=35°C, T_sink=80°C)。</li>
+                                <li><strong>热源泵：</strong> 恒定运行功率 7 kW (包含在 E_aux)。</li>
+                                <li><strong>热汇泵：</strong> 恒定运行功率 10 kW (包含在 E_aux)。</li>
+                                <li><strong>总辅助功率：</strong> 7 kW + 10 kW = 17 kW。</li>
+                            </ul>
+
+                            <h3>步骤二：热源分析</h3>
+                            <ul>
+                                <li><strong>来源：</strong> 工艺冷却水。</li>
+                                <li><strong>温度：</strong> 全年恒定 35°C。</li>
+                            </ul>
+
+                            <h3>步骤三：热汇分析</h3>
+                            <ul>
+                                <li><strong>用途：</strong> 工艺加热。</li>
+                                <li><strong>温度：</strong> 恒定 80°C。</li>
+                                <li><strong>负荷曲线：</strong> 见下表 "月供热需求 (Q_demand)"。工厂有夏季检修期（7月、8月），负荷较低。</li>
+                            </ul>
+
+                            <h3>步骤四：性能图谱 (假设的制造商数据)</h3>
+                            <p>在此工况 (35°C -> 80°C) 下：</p>
+                            <ul>
+                                <li><strong>满负荷 (100%)：</strong> 制热量 = 500 kW, <strong>COP = 3.10</strong></li>
+                                <li><strong>部分负荷 (75%)：</strong> 制热量 = 375 kW, <strong>COP = 2.95</strong> (效率略降)</li>
+                                <li><strong>部分负荷 (50%)：</strong> 制热量 = 250 kW, <strong>COP = 2.70</strong> (效率下降)</li>
+                            </ul>
+                        </div>
+                    </details>
+
+                    <!-- 案例计算过程 -->
+                    <details class="border-green-300" open>
+                        <summary class="bg-green-50 text-green-900 hover:bg-green-100">
+                            案例计算过程 (步骤五 & 六)
+                        </summary>
+                        <div class="details-content">
+                            <p>基于以上定义，我们推导每个月度工况箱的数据。核心是根据 "月供热需求" 和 "热泵最大产能" 来确定 "运行小时数" 和 "平均运行COP"。</p>
+                            
+                            <div class="overflow-x-auto shadow-md rounded-lg">
+                                <table class="example-table">
+                                    <thead>
+                                        <tr>
+                                            <th>月份</th>
+                                            <th>月供热需求<br>(Q_demand) [kWh]</th>
+                                            <th>热泵最大月产能<br>(Q_max) [kWh]<br>(500kW * H)</th>
+                                            <th>月运行小时<br>(H) [h]</th>
+                                            <th>平均负荷率<br>(Q_demand / Q_max)</th>
+                                            <th>平均运行COP<br>(COP_op)</th>
+                                            <th class="result-col">压缩机耗电<br>(E_comp) [kWh]<br>(Q_d / COP_op)</th>
+                                            <th class="result-col">辅助设备耗电<br>(E_aux) [kWh]<br>(17kW * H)</th>
+                                            <th class="result-col">月总耗电<br>(E_total_mon) [kWh]</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 数据基于: 730 h/月 (30.4天), 满载 500kW, 辅电 17kW -->
+                                        <!-- Q_max (Jan) = 500 * 744 = 372,000 -->
+                                        <tr>
+                                            <td>一月 (744h)</td>
+                                            <td class="highlight-col">350,000</td>
+                                            <td>372,000</td>
+                                            <td>700.0</td> <!-- 350,000 / 500 -->
+                                            <td>94% (满载)</td>
+                                            <td>3.10</td>
+                                            <td class="result-col">112,903</td>
+                                            <td class="result-col">11,900</td>
+                                            <td class="result-col">124,803</td>
+                                        </tr>
+                                        <!-- Q_max (Feb) = 500 * 672 = 336,000 -->
+                                        <tr>
+                                            <td>二月 (672h)</td>
+                                            <td class="highlight-col">320,000</td>
+                                            <td>336,000</td>
+                                            <td>640.0</td> <!-- 320,000 / 500 -->
+                                            <td>95% (满载)</td>
+                                            <td>3.10</td>
+                                            <td class="result-col">103,226</td>
+                                            <td class="result-col">10,880</td>
+                                            <td class="result-col">114,106</td>
+                                        </tr>
+                                        <!-- Q_max (Mar) = 500 * 744 = 372,000 -->
+                                        <tr>
+                                            <td>三月 (744h)</td>
+                                            <td class="highlight-col">360,000</td>
+                                            <td>372,000</td>
+                                            <td>720.0</td> <!-- 360,000 / 500 -->
+                                            <td>97% (满载)</td>
+                                            <td>3.10</td>
+                                            <td class="result-col">116,129</td>
+                                            <td class="result-col">12,240</td>
+                                            <td class="result-col">128,369</td>
+                                        </tr>
+                                        <!-- Q_max (Apr) = 500 * 720 = 360,000 -->
+                                        <tr>
+                                            <td>四月 (720h)</td>
+                                            <td class="highlight-col">300,000</td>
+                                            <td>360,000</td>
+                                            <td>600.0</td> <!-- 300,000 / 500 -->
+                                            <td>83% (75%档)</td>
+                                            <td>2.95</td>
+                                            <td class="result-col">101,695</td>
+                                            <td class="result-col">10,200</td>
+                                            <td class="result-col">111,895</td>
+                                        </tr>
+                                        <!-- Q_max (May) = 500 * 744 = 372,000 -->
+                                        <tr>
+                                            <td>五月 (744h)</td>
+                                            <td class="highlight-col">280,000</td>
+                                            <td>372,000</td>
+                                            <td>560.0</td> <!-- 280,000 / 500 -->
+                                            <td>75% (75%档)</td>
+                                            <td>2.95</td>
+                                            <td class="result-col">94,915</td>
+                                            <td class="result-col">9,520</td>
+                                            <td class="result-col">104,435</td>
+                                        </tr>
+                                        <!-- Q_max (Jun) = 500 * 720 = 360,000 -->
+                                        <tr>
+                                            <td>六月 (720h)</td>
+                                            <td class="highlight-col">260,000</td>
+                                            <td>360,000</td>
+                                            <td>520.0</td> <!-- 260,000 / 500 -->
+                                            <td>72% (75%档)</td>
+                                            <td>2.95</td>
+                                            <td class="result-col">88,136</td>
+                                            <td class="result-col">8,840</td>
+                                            <td class="result-col">96,976</td>
+                                        </tr>
+                                        <!-- Q_max (Jul) = 500 * 744 = 372,000 (检修) -->
+                                        <tr>
+                                            <td>七月 (744h)</td>
+                                            <td class="highlight-col">150,000</td>
+                                            <td>372,000</td>
+                                            <td>300.0</td> <!-- 150,000 / 500 -->
+                                            <td>40% (50%档)</td>
+                                            <td>2.70</td>
+                                            <td class="result-col">55,556</td>
+                                            <td class="result-col">5,100</td>
+                                            <td class="result-col">60,656</td>
+                                        </tr>
+                                        <!-- Q_max (Aug) = 500 * 744 = 372,000 (检修) -->
+                                        <tr>
+                                            <td>八月 (744h)</td>
+                                            <td class="highlight-col">160,000</td>
+                                            <td>372,000</td>
+                                            <td>320.0</td> <!-- 160,000 / 500 -->
+                                            <td>43% (50%档)</td>
+                                            <td>2.70</td>
+                                            <td class="result-col">59,259</td>
+                                            <td class="result-col">5,440</td>
+                                            <td class="result-col">64,699</td>
+                                        </tr>
+                                        <!-- Q_max (Sep) = 500 * 720 = 360,000 -->
+                                        <tr>
+                                            <td>九月 (720h)</td>
+                                            <td class="highlight-col">270,000</td>
+                                            <td>360,000</td>
+                                            <td>540.0</td> <!-- 270,000 / 500 -->
+                                            <td>75% (75%档)</td>
+                                            <td>2.95</td>
+                                            <td class="result-col">91,525</td>
+                                            <td class="result-col">9,180</td>
+                                            <td class="result-col">100,705</td>
+                                        </tr>
+                                        <!-- Q_max (Oct) = 500 * 744 = 372,000 -->
+                                        <tr>
+                                            <td>十月 (744h)</td>
+                                            <td class="highlight-col">300,000</td>
+                                            <td>372,000</td>
+                                            <td>600.0</td> <!-- 300,000 / 500 -->
+                                            <td>81% (75%档)</td>
+                                            <td>2.95</td>
+                                            <td class="result-col">101,695</td>
+                                            <td class="result-col">10,200</td>
+                                            <td class="result-col">111,895</td>
+                                        </tr>
+                                        <!-- Q_max (Nov) = 500 * 720 = 360,000 -->
+                                        <tr>
+                                            <td>十一月 (720h)</td>
+                                            <td class="highlight-col">330,000</td>
+                                            <td>360,000</td>
+                                            <td>660.0</td> <!-- 330,000 / 500 -->
+                                            <td>92% (满载)</td>
+                                            <td>3.10</td>
+                                            <td class="result-col">106,452</td>
+                                            <td class="result-col">11,220</td>
+                                            <td class="result-col">117,672</td>
+                                        </tr>
+                                        <!-- Q_max (Dec) = 500 * 744 = 372,000 -->
+                                        <tr>
+                                            <td>十二月 (744h)</td>
+                                            <td class="highlight-col">360,000</td>
+                                            <td>372,000</td>
+                                            <td>720.0</td> <!-- 360,000 / 500 -->
+                                            <td>97% (满载)</td>
+                                            <td>3.10</td>
+                                            <td class="result-col">116,129</td>
+                                            <td class="result-col">12,240</td>
+                                            <td class="result-col">128,369</td>
+                                        </tr>
+                                        <!-- 总计 -->
+                                        <tr class="font-bold bg-gray-100">
+                                            <td>全年总计</td>
+                                            <td class="highlight-col">3,480,000</td>
+                                            <td>4,336,800</td>
+                                            <td>6,980.0</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td class="result-col">1,147,600</td>
+                                            <td class="result-col">116,960</td>
+                                            <td class="result-col">1,264,560</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h3 class="mt-8">步骤六：汇总计算 SPF</h3>
+                            <div class="result-card mt-4">
+                                <div class="result-item">
+                                    <span class="result-label">全年总供热 (Q_total)</span>
+                                    <span class="result-value">3,480,000.00 kWh</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">压缩机总耗电 (E_compressor)</span>
+                                    <span class="result-value">1,147,600.00 kWh</span>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">辅助设备总耗电 (E_aux)</span>
+                                    <span class="result-value">116,960.00 kWh</span>
+                                </div>
+                                <div class="result-item border-t-2 border-gray-300 pt-4 mt-4">
+                                    <span class="result-label font-bold text-gray-800">全年总耗电 (E_total)</span>
+                                    <span class="result-value font-bold text-lg">1,264,560.00 kWh</span>
+                                </div>
+                                <div class="mt-8 text-center">
+                                    <span class="text-lg font-medium text-gray-600 block">
+                                        全年综合性能系数 (SPF) = Q_total / E_total
+                                    </span>
+                                    <span class="result-spf block mt-2 text-green-700">
+                                        2.752
+                                    </span>
+                                    <p class="text-sm text-gray-600 mt-2">(3,480,000 / 1,264,560)</p>
+                                </div>
+                            </div>
+                            
+                            <h3 class="mt-8">案例结论</h3>
+                            <p>在这个典型工况下，虽然热泵的额定满载 COP 达到了 <strong>3.1</strong>，但在考虑了部分负荷（7、8月检修期）和全年辅助设备（循环泵）的耗电后，最终的全年综合性能系数 (SPF) 为 <strong>2.752</strong>。</p>
+                            <p>这个 <strong>SPF=2.752</strong> 才是应该被用于LCOH经济性分析的准确值。</p>
+                        </div>
+                    </details>
+                </div>
+            </section>
+        </main>
+
+        <!-- 脚注 -->
+        <footer class="mt-12 border-t border-gray-200 pt-8 text-center text-gray-500">
+            <p class="text-sm">
+                本计算器基于 VDI 4645 分箱法（月）进行估算。
+            </p>
+            <p class="text-sm mt-1">
+                计算公式: SPF = 全年总供热 / (压缩机总耗电 + 辅助设备总耗电)
+            </p>
+            <p class="text-sm mt-1">
+                计算结果的准确性高度依赖于输入的 (COP_op) 和 (E_aux) 数据的质量。
+            </p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableBody = document.getElementById('input-table');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const demoBtn = document.getElementById('demo-btn');
+            const resultsContainer = document.getElementById('results-container');
+            const errorMessage = document.getElementById('error-message');
+
+            const months = [
+                '一月 (Jan)', '二月 (Feb)', '三月 (Mar)', '四月 (Apr)', 
+                '五月 (May)', '六月 (Jun)', '七月 (Jul)', '八月 (Aug)', 
+                '九月 (Sep)', '十月 (Oct)', '十一月 (Nov)', '十二月 (Dec)'
+            ];
+
+            // 示例数据 (来自第三部分的VDI 4645典型案例)
+            const demoData = [
+                { q: 350000, cop: 3.10, aux: 11900 }, // 一月
+                { q: 320000, cop: 3.10, aux: 10880 }, // 二月
+                { q: 360000, cop: 3.10, aux: 12240 }, // 三月
+                { q: 300000, cop: 2.95, aux: 10200 }, // 四月
+                { q: 280000, cop: 2.95, aux: 9520 },  // 五月
+                { q: 260000, cop: 2.95, aux: 8840 },  // 六月
+                { q: 150000, cop: 2.70, aux: 5100 },  // 七月 (检修)
+                { q: 160000, cop: 2.70, aux: 5440 },  // 八月 (检修)
+                { q: 270000, cop: 2.95, aux: 9180 },  // 九月
+                { q: 300000, cop: 2.95, aux: 10200 }, // 十月
+                { q: 330000, cop: 3.10, aux: 11220 }, // 十一月
+                { q: 360000, cop: 3.10, aux: 12240 }  // 十二月
+            ];
+
+            // 初始化表格
+            function createTableRows() {
+                let html = '';
+                months.forEach((month, index) => {
+                    const i = index + 1;
+                    const data = demoData[index]; // 获取当月示例数据
+                    html += `
+                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${month}</td>
+                            <td class="input-cell">
+                                <input type="number" id="q_demand_${i}" class="input-field" placeholder="例如 100000" value="${data.q}">
+                            </td>
+                            <td class="input-cell">
+                                <input type="number" id="cop_${i}" class="input-field" placeholder="例如 3.1" step="0.01" value="${data.cop}">
+                            </td>
+                            <td class="input-cell">
+                                <input type="number" id="e_aux_${i}" class="input-field" placeholder="例如 5000" value="${data.aux}">
+                            </td>
+                        </tr>
+                    `;
+                });
+                tableBody.innerHTML = html;
+            }
+
+            // 加载示例数据
+            function loadDemoData() {
+                demoData.forEach((data, index) => {
+                    const i = index + 1;
+                    document.getElementById(`q_demand_${i}`).value = data.q;
+                    document.getElementById(`cop_${i}`).value = data.cop;
+                    document.getElementById(`e_aux_${i}`).value = data.aux;
+                });
+                clearResults();
+            }
+
+            // 清除结果
+            function clearResults() {
+                resultsContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+            }
+
+            // 执行计算
+            function calculateSPF() {
+                let total_q_demand = 0;
+                let total_e_compressor = 0;
+                let total_e_aux = 0;
+                let hasError = false;
+                let errorMsg = '';
+
+                for (let i = 1; i <= 12; i++) {
+                    const q_demand = parseFloat(document.getElementById(`q_demand_${i}`).value) || 0;
+                    const cop = parseFloat(document.getElementById(`cop_${i}`).value) || 0;
+                    const e_aux = parseFloat(document.getElementById(`e_aux_${i}`).value) || 0;
+
+                    let e_compressor = 0;
+
+                    if (q_demand > 0 && cop <= 0) {
+                        hasError = true;
+                        errorMsg = `${months[i-1]}：供热需求 > 0，但 COP <= 0，无法计算。`;
+                        document.getElementById(`cop_${i}`).classList.add('border-red-500');
+                    } else {
+                        document.getElementById(`cop_${i}`).classList.remove('border-red-500');
+                        if (cop > 0) {
+                            e_compressor = q_demand / cop;
+                        }
+                    }
+
+                    if (hasError) break; // 发现错误后停止计算
+
+                    total_q_demand += q_demand;
+                    total_e_compressor += e_compressor;
+                    total_e_aux += e_aux;
+                }
+
+                if (hasError) {
+                    errorMessage.textContent = errorMsg;
+                    errorMessage.classList.remove('hidden');
+                    resultsContainer.classList.add('hidden');
+                    return;
+                }
+
+                // 计算总计
+                const total_e_annual = total_e_compressor + total_e_aux;
+                const spf = (total_e_annual > 0) ? (total_q_demand / total_e_annual) : 0;
+
+                // 显示结果
+                document.getElementById('result_q_total').textContent = total_q_demand.toFixed(2);
+                document.getElementById('result_e_compressor').textContent = total_e_compressor.toFixed(2);
+                document.getElementById('result_e_aux').textContent = total_e_aux.toFixed(2);
+                document.getElementById('result_e_total').textContent = total_e_annual.toFixed(2);
+                document.getElementById('result_spf').textContent = spf.toFixed(3);
+
+                resultsContainer.classList.remove('hidden');
+                errorMessage.classList.add('hidden');
+            }
+
+            // 绑定事件
+            createTableRows(); // 页面加载时创建表格
+            calculateBtn.addEventListener('click', calculateSPF);
+            demoBtn.addEventListener('click', loadDemoData);
+        });
+    </script>
+</body>
+</html>
+
+
+
