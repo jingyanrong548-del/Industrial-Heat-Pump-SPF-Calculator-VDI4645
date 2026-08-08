@@ -57,6 +57,13 @@ jobs:
             deploy/spf-calculate-api.service \
             | ssh $SSH_OPTS "$REMOTE" \
               "mkdir -p '$REMOTE_API' && cd '$REMOTE_API' && tar xzf - && \
+               find '$REMOTE_API' -name '._*' -delete && \
+               chown -R admin:admin '$REMOTE_API' && \
                cp -f deploy/spf-calculate-api.service /etc/systemd/system/spf-calculate-api.service && \
-               systemctl daemon-reload && systemctl enable --now spf-calculate-api && systemctl restart spf-calculate-api && \
-               curl -fsS http://127.0.0.1:9106/health"
+               systemctl daemon-reload && systemctl enable spf-calculate-api && systemctl restart spf-calculate-api && \
+               for i in 1 2 3 4 5 6 7 8 9 10; do \
+                 if curl -fsS http://127.0.0.1:9106/health; then echo; exit 0; fi; \
+                 sleep 1; \
+               done; \
+               echo 'ERROR: SPF API health check failed' >&2; systemctl status spf-calculate-api --no-pager >&2; exit 1"
+
