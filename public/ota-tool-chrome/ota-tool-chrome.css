@@ -1,0 +1,163 @@
+/**
+ * Open Thermal AI — shared tool chrome (disclaimer + close button).
+ * Loaded by *.openthermalai.com calculator apps.
+ */
+
+.ota-tool-close {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top, 0px));
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
+  z-index: 2147483000;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem;
+  margin: 0;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ota-tool-close:hover,
+.ota-tool-close:focus-visible {
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.22);
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.ota-tool-close:active {
+  transform: scale(0.96);
+}
+
+.ota-tool-close__icon {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  pointer-events: none;
+}
+
+/* Adopt existing app close buttons when enhanced */
+#closeButton.ota-tool-close,
+#close-app-btn.ota-tool-close,
+button[data-ota-close].ota-tool-close {
+  /* keep fixed chrome look even if originally in-header */
+  position: fixed !important;
+}
+
+.ota-tool-disclaimer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 56rem;
+  margin: 1.5rem auto 2rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  color: #334155;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.ota-tool-disclaimer *,
+.ota-tool-disclaimer *::before,
+.ota-tool-disclaimer *::after {
+  box-sizing: border-box;
+}
+
+.ota-tool-disclaimer__brand {
+  margin: 0 0 0.65rem;
+  font-weight: 650;
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+
+.ota-tool-disclaimer__summary p {
+  margin: 0 0 0.55rem;
+}
+
+.ota-tool-disclaimer__summary p:last-child {
+  margin-bottom: 0;
+}
+
+.ota-tool-disclaimer__zh {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.ota-tool-disclaimer__en {
+  opacity: 0.92;
+}
+
+.ota-tool-disclaimer__links {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+}
+
+.ota-tool-disclaimer__links a {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ota-tool-disclaimer__links a:hover,
+.ota-tool-disclaimer__links a:focus-visible {
+  color: #1e40af;
+}
+
+.ota-tool-disclaimer__details {
+  margin-top: 0.65rem;
+}
+
+.ota-tool-disclaimer__summary-trigger {
+  cursor: pointer;
+  font-weight: 600;
+  color: #0f172a;
+  list-style: none;
+}
+
+.ota-tool-disclaimer__summary-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.ota-tool-disclaimer__expanded {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.ota-tool-disclaimer__expanded p {
+  margin: 0 0 0.55rem;
+}
+
+.ota-tool-disclaimer__expanded p:last-child {
+  margin-bottom: 0;
+}
+
+/* Hide legacy duplicate disclaimers when chrome is mounted */
+[data-ota-legacy-disclaimer].ota-tool-legacy-hidden,
+.ota-tool-legacy-hidden {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .ota-tool-disclaimer {
+    margin: 1rem 0.75rem 4.5rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 0.65rem;
+  }
+
+  .ota-tool-close {
+    top: max(0.5rem, env(safe-area-inset-top, 0px));
+    right: max(0.5rem, env(safe-area-inset-right, 0px));
+  }
+}

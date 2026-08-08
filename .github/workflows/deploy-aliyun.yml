@@ -1,0 +1,62 @@
+# Deploy static UI to spf.openthermalai.com (SSH + tar; no rsync).
+# Optional: sync /calculate API to /opt/spf-calculate-api and restart systemd.
+name: Deploy to Aliyun (spf)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aliyun-deploy-spf
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: vars.ALIYUN_DEPLOY_ENABLED == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage static site
+        run: |
+          mkdir -p dist-out/ota-tool-chrome
+          cp index.html dist-out/
+          if [ -d public/ota-tool-chrome ]; then
+            cp -R public/ota-tool-chrome/. dist-out/ota-tool-chrome/
+          fi
+
+      - name: Deploy static + API via SSH/tar
+        env:
+          ALIYUN_SSH_PRIVATE_KEY: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$ALIYUN_SSH_PRIVATE_KEY" > ~/.ssh/aliyun_deploy
+          chmod 600 ~/.ssh/aliyun_deploy
+          ssh-keyscan -H 8.138.191.154 >> ~/.ssh/known_hosts
+          SSH_OPTS="-i ~/.ssh/aliyun_deploy -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20"
+          REMOTE="root@8.138.191.154"
+          REMOTE_DIR="/www/wwwroot/spf.openthermalai.com"
+          REMOTE_API="/opt/spf-calculate-api"
+
+          echo "→ Static → ${REMOTE}:${REMOTE_DIR}"
+          COPYFILE_DISABLE=1 tar --format=ustar -czf - -C dist-out . \
+            | ssh $SSH_OPTS "$REMOTE" \
+              "mkdir -p '$REMOTE_DIR' && find '$REMOTE_DIR' -mindepth 1 -maxdepth 1 ! -name '.user.ini' ! -name '.htaccess' ! -name '.well-known' -exec rm -rf {} + && cd '$REMOTE_DIR' && tar xzf - && chown -R www:www '$REMOTE_DIR' 2>/dev/null || true"
+
+          echo "→ API → ${REMOTE}:${REMOTE_API}"
+          COPYFILE_DISABLE=1 tar --format=ustar -czf - \
+            package.json \
+            server \
+            src \
+            deploy/spf-calculate-api.service \
+            | ssh $SSH_OPTS "$REMOTE" \
+              "mkdir -p '$REMOTE_API' && cd '$REMOTE_API' && tar xzf - && \
+               cp -f deploy/spf-calculate-api.service /etc/systemd/system/spf-calculate-api.service && \
+               systemctl daemon-reload && systemctl enable --now spf-calculate-api && systemctl restart spf-calculate-api && \
+               curl -fsS http://127.0.0.1:9106/health"
